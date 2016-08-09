@@ -6952,7 +6952,7 @@ BOOST_AUTO_TEST_CASE(fixed_type_arguments)
 
 	)";
 	compileAndRun(sourceCode, 0, "C");
-	//BOOST_CHECK(callContractFunction("f(fixed,fixed)", u256(fixed(1, 3, 128)), u256(fixed(1, 2, 128))) == encodeArgs(fixed(1, 3, 128), fixed(1, 2, 128)));
+	BOOST_CHECK(callContractFunction("f(fixed,fixed)", u256(fixed(1, 3, 128)), u256(fixed(1, 2, 128))) == encodeArgs(fixed(1, 3, 128), fixed(1, 2, 128)));
 }
 
 BOOST_AUTO_TEST_CASE(int_to_fixed_type)
