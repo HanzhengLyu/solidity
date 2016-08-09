@@ -7038,6 +7038,7 @@ BOOST_AUTO_TEST_CASE(fixed_type_subtraction)
 		}
 	)";
 	compileAndRun(sourceCode, 0, "C");
+	cout << dev::fromBigEndian<u256>(callContractFunction("f()")) << endl;
 	BOOST_CHECK(callContractFunction("f()") == encodeArgs(fixed(-115, 4, 128)));
 }
 
@@ -7077,6 +7078,10 @@ BOOST_AUTO_TEST_CASE(fixed_type_multiplication)
 	vector<uint8_t> fullFracBytes = {45,130,216,45,130,216,45,130,216,45,130,216,45,130,216,44,159,73,244,159,73,244,159,73,244,159,73,244,159,73,244,160};
 	vector<uint8_t> largeFracBytes = {0,0,0,0,0,0,0,29,42,170,170,170,170,170,170,170,170,170,170,170,127,255,255,255,255,255,255,255,255,255,255,0};
 	BOOST_CHECK(callContractFunction("full()") == encodeArgs(fixed(999, 8, 128)));
+	u256 a;
+	a = dev::fromBigEndian<u256>(callContractFunction("full()"));
+	cout << a << endl;
+    cout << "CAN YOU HEAR ME!?!?!?!" << endl;
 	BOOST_CHECK(callContractFunction("fullFractionSide()") == fullFracBytes);
 	BOOST_CHECK(callContractFunction("largerFractionSide()") == largeFracBytes);
 	BOOST_CHECK(callContractFunction("largerIntSide()") == encodeArgs(fixed(96028001, 16, 32)));
