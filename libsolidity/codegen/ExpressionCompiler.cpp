@@ -31,7 +31,6 @@
 #include <libsolidity/codegen/CompilerContext.h>
 #include <libsolidity/codegen/CompilerUtils.h>
 #include <libsolidity/codegen/LValue.h>
-#include <libsolidity/inlineasm/AsmStack.h>
 #include <libevmasm/GasMeter.h>
 using namespace std;
 
@@ -1364,16 +1363,35 @@ void ExpressionCompiler::appendArithmeticOperatorCode(Token::Value _operator, Ty
 			if (c_numBits - c_fractionalBits == 0)
 			{
 				//take two numbers, cut them in half, multiply them, simple as that.
-				appendInlineAssembly(R"(
+				m_context.appendInlineAssembly(R"(
 					{
-						let firstNum := dup1
-						let secondNum := dup3
-						let runningTotal := mul($div(firstNum, $halfShift), $div(secondNum, $halfShift))
+						{
+							let xhigh := $div(x, $halfShift)
+							let xlow := and(x, sub($halfShift, 1))
+							let yhigh := $div(y, $halfShift)
+							let ylow := and(y, sub($halfShift, 1))
+							// x * y
+							// = (xhigh * S + xlow) * (yhigh * S + ylow)
+							// = xhigh * yhigh * S * S
+							//   + (xhigh * ylow + xlow * yhigh) * S
+							//   + (xlow * ylow)
+							// (we need to divide by S * S at the end)
+							x := add(
+								mul(xhigh, yhigh),
+								add(
+									add(mul(xhigh, ylow), mul(xlow, yhigh)),
+									div(mul(xlow, ylow), $halfShift)
+								)
+							)
+						}
+						pop
 					}
-				)", map<string, string> {
+				)","
+				vector<string>{"x", "y"},"
+				map<string, string> {
 						{"$div", (c_isSigned ? "sdiv" : "div")},
 						{"$halfShift", toString(c_halfShift)}
-				});
+				}, );
 
 				/*m_context << c_halfShift << Instruction::DUP1 << Instruction::SWAP2 << (c_isSigned ? Instruction::SDIV : Instruction::DIV); 
 				m_context << Instruction::SWAP2 << (c_isSigned ? Instruction::SDIV : Instruction::DIV) << Instruction::MUL;
@@ -1765,22 +1783,6 @@ void ExpressionCompiler::setLValueToStorageItem(Expression const& _expression)
 CompilerUtils ExpressionCompiler::utils()
 {
 	return CompilerUtils(m_context);
-}
-
-void ExpressionCompiler::appendInlineAssembly(string const& _assembly, map<string, string> const& _replacements)
-{
-	if (_replacements.empty())
-		solAssert(!!assembly::InlineAssemblyStack().parseAndAssemble(_assembly, m_context.nonConstAssembly()), "");
-	else
-	{
-		string assembly = _assembly;
-		for (auto const& replacement: _replacements)
-			assembly = boost::algorithm::replace_all_copy(assembly, replacement.first, replacement.second);
-		cout << "append inline assembly input: " << assembly << endl;
-		string passFail = bool(assembly::InlineAssemblyStack().parseAndAssemble(assembly, m_context.nonConstAssembly())) ? "pass" : "fail";
-		cout << "did it pass or fail?: " << passFail << endl;
-		solAssert(!!assembly::InlineAssemblyStack().parseAndAssemble(assembly, m_context.nonConstAssembly()), "");
-	}
 }
 
 }
